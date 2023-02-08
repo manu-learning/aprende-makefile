@@ -1,0 +1,16 @@
+#+TITLE: Directivas
+* Directiva vpath
+** Conceptos
+  - Con ~vpath~ le indicamos a make donde buscar/encontrar un archivo de una lista de dependencias de una regla
+  - Su uso es ~vpath patrón ruta~ (Un patrón podría ser ~*.c~ para los source files, ó ~*.h~ para los headers)
+  - Nos evita indicar las rutas en las dependencias
+    (Ej. ~player.o: player.c player.h~ en vez de  ~player.o: src/player.c include/player.h~
+  - Un ejemplo común para un programa de C, es indicarle la ruta para encontrar los *source files* o *headers*
+
+  #+BEGIN_QUOTE
+  The VPATH variable consists of a list of directories to search when make needs a file
+  make will search each directory for any file it needs. If a file of
+  the same name exists in multiple places in the VPATH list, make grabs the first one.
+  #+END_QUOTE
+** TODO Ejemplo Básico
+* TODO Directiva include
