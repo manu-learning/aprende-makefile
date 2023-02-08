@@ -1,0 +1,383 @@
+#+TITLE: Macros ó Variables
+* Macros
+** Conceptos
+  - Las *macros* ó *variables* son *identificadores* que se sustituyen por su valor
+    (al parsear el archivo ~Makefile~)
+  - Se *expanden* (sustituyen por su valor) cuando se usa con el ~$~ Ej. ~$(macro)~
+  - Son sensibles a las mayusculas, y no pueden contener espacios
+  - Se definen al principio del Makefile, si fuesen redefinidas se usará la definición más nueva
+** Ejemplo
+  #+BEGIN_SRC makefile
+    # Definimos 2 macros: PROGRAMA, OBJETOS
+
+    PROGRAMA = juego.exe # <- macro #1
+
+    OBJETOS = juego.o jugador.o item.o # <- macro #2
+
+    # Cuando GNU Make lea esta regla, reemplazará las macros por su valor
+    #
+    # juego.exe : juego.o jugador.o item.o
+    #		gcc -I./include -o juego.exe juego.o jugador.o item.o
+
+    $(PROGRAMA): $(OBJETOS)
+      gcc -I./include -o juego.exe $(OBJETOS)
+
+    # las siguientes reglas tienen lógica repetida y son muy básicas,
+    # no entramos en detalle porque lo importante en este ejemplo son las MACROS
+    juego.o : juego.c jugador.h item.h
+      gcc -I./include -c -o juego.o juego.c
+
+    jugador.o : jugador.c jugador.h
+      gcc -I./include -c -o jugador.o jugador.c
+
+    item.o : item.c item.h
+      gcc -I./include -c -o item.o item.c
+  #+END_SRC
+* Convenciones de Macros
+** Tabla Comparativa
+   #+BEGIN_QUOTE
+   La mayoría de los ~Makefile~ tienden a seguir estas convenciones al crear *macros*
+   #+END_QUOTE
+
+   |------------+-----------+---------------------------------------------------------------|
+   | Nombre     | Expansión | Descripcion                                                   |
+   |------------+-----------+---------------------------------------------------------------|
+   | OBJS       |           | Representa todos los archivos ~.o~                            |
+   |            |           | Nos evita repetir cada ~.o~ como dependencia en varias reglas |
+   |------------+-----------+---------------------------------------------------------------|
+   | INSTALLDIR |           | Para indicar la ruta donde estará el ejecutable del programa  |
+   |            |           | Se tiende a utilizar en un target ~INSTALL~ que creemos       |
+   |------------+-----------+---------------------------------------------------------------|
+   | INCLUDE    |           | Para indicar una o varias rutas de archivos a incluir         |
+   |            |           | (por lo general archivos de cabecera ~.h~)                    |
+   |------------+-----------+---------------------------------------------------------------|
+** Ejemplos
+*** Ejemplo 1 - Sin usar macros
+    #+BEGIN_QUOTE
+    La ventaja de usar esta macro (podriamos ponerle cualquier otro nombre, es sólo una convención)
+    es que sólo la nombramos usando el ~$~ y listo :)
+
+    Pero.. si NO la usamos y.. hay muchas reglas que usen los mismos archivos ~.c~ habrán reglas redundantes
+    que repitan dependencias, y en caso que llegase a dejar de usa alguno de los archivos o cambiase
+    el nombre de alguno de ellos deberiamos modificar uno por uno... :(
+    #+END_QUOTE
+
+    #+BEGIN_SRC makefile
+      juego.exe: juego.c jugadores.c items.c ./include/jugador.h ./include/item.h
+        gcc -I./include -o juego.exe juego.c jugador.c item.c
+    #+END_SRC
+*** Ejemplo 2 - Usando macros
+    #+BEGIN_SRC makefile
+      CC = gcc
+      CFLAGS = -I./include
+      PROGRAMA = juego.exe
+      FUENTES = juego.c jugador.c item.c
+
+      $(PROGRAMA): $(FUENTES) $(INCLUDE)/jugador.h $(INCLUDE)/item.h
+        $(CC) $(CFLAGS)  -o $(PROGRAMA) $(FUENTES)
+    #+END_SRC
+*** Ejemplo 3 - Usando macros automáticas
+    #+BEGIN_SRC makefile
+      CC = gcc
+      CFLAGS = -I./include
+      PROGRAMA = juego.exe
+      FUENTES = juego.c jugador.c item.c
+
+      # Macros automáticas
+      # - $@ para obtener el nombre del objetivo/target
+      # - $^ para obtener todas las dependencias
+      #
+      # Nota: sacamos los .h de las dependencias, para mostrar el $^
+      # pero si modificaran los .h, el objetivo no se reconstruiría,
+      # sólo ocurriría si se modificaran los fuentes (.c)
+      # (en otros ejemplos resolvemos esta problemática)
+      $(PROGRAMA): $(FUENTES)
+        $(CC) $(CFLAGS)  -o $@ $^
+    #+END_SRC
+* TODO Macros predefinidas
+** Conceptos
+  - Tienen un valor por defecto, por tanto las definimos en el *Makefile* le estamos sobreescribiendo el contenido
+  - El compilador *gcc* se comunica con *GNU linker* cuando enlaza los objetos (.o) para generar el ejecutable (para más detalles ~man ld~)
+** Flags y Opciones
+  - La opción ~-L~ del flag ~LDFLAGS~ se usa de la forma ~-LrutaDeBibliotecas~ es decir la ruta va seguido sin espacios (Ej. ~LDFLAGS=-L/usr/jelou/shared~)
+  - La opción ~-l~ del flag ~LDLIBS~ se usa de la forma ~-lnombreBiblioteca~ (Ej. ~LDLIBS=-lm -lpthread -lcommons~)
+  - El flag ~LDLIBS~ de las bibliotecas externas se debe agregar al final, porque el GNU Linker irá encontrando de a poco los *undefined symbols*
+** Tabla Comparativa
+  |----------+-----------+------------------------------------------------------------------------------------------------------------------|
+  | Nombre   | Expansión | Descripción                                                                                                      |
+  |----------+-----------+------------------------------------------------------------------------------------------------------------------|
+  | MAKE     | make      | Programa que gestiona los ~Makefile~                                                                             |
+  |----------+-----------+------------------------------------------------------------------------------------------------------------------|
+  | LDFLAGS  |           | - Flags al *enlazador/linker* ~ld~ (cuando el compilador lo invoca)                                              |
+  |          |           | - Se usa con la opción ~-L~ para indicar la ruta donde encontrar bibliotecas que usará la aplicación             |
+  |----------+-----------+------------------------------------------------------------------------------------------------------------------|
+  | LDLIBS   |           | - Se usa con la opción ~-l~ para indicar los nombres de las bibliotecas que usará                                |
+  |          |           | - Se complementa con ~LDFLAGS~ porque estas bibliotecas deberían estar en la ruta que se indicó en ese otro FLAG |
+  |----------+-----------+------------------------------------------------------------------------------------------------------------------|
+  | CC       | gcc       | Compilador predefinido de C                                                                                      |
+  |----------+-----------+------------------------------------------------------------------------------------------------------------------|
+  | CXX      | g++       | Compilador predefinido de C++                                                                                    |
+  |----------+-----------+------------------------------------------------------------------------------------------------------------------|
+  | CFLAGS   |           | Flags del compilador de C                                                                                        |
+  |----------+-----------+------------------------------------------------------------------------------------------------------------------|
+  | CPPFLAGS |           | Flags para el pre-procesador de C                                                                                |
+  |----------+-----------+------------------------------------------------------------------------------------------------------------------|
+  | CXXFLAGS |           | Flags del compilador de C++                                                                                      |
+  |----------+-----------+------------------------------------------------------------------------------------------------------------------|
+** TODO Ejemplos
+* Macros automáticas
+** Conceptos
+  - Las *macros automáticas* son macros *internas* cuyo valor depende de la regla que estemos ejecutando.
+  - Estas *macros* previo a ejecutar un *comando* evalúan el *timestamp* del *target* y de sus *dependencias*
+
+  #+BEGIN_QUOTE
+  Para ver algunos de los ejemplos, luego de ejecutar el target ~init~ que hicimos para simular un programa
+  deberemos actualizar los archivos que se creen. Porque estas macros evalúan las *dependencias*
+  que sean más recientes que el *target*.
+
+  Es decir si tratamos de ejecutarlos luego de usar ~init~ puede que en algunos solo diga
+  "tal archivo está actualizado" y es porque las *dependencias* tienen la misma fecha/hora de
+  modificación que el *target*.
+
+  Por tanto.. repito, debemos modificar los archivos, para ver funcionar algunos de los ejemplos,
+  si no dirá solo el mensaje que dijimos antes.
+  #+END_QUOTE
+** Tabla Comparativa
+   #+name: macros-automaticas
+   |-------+------------------------------------------------------------------------------------------|
+   | Macro | Expansión                                                                                |
+   |-------+------------------------------------------------------------------------------------------|
+   | $@    | Obtiene el _nombre del Target_ de la regla que se está ejecutando                        |
+   |-------+------------------------------------------------------------------------------------------|
+   | $<    | Captura la primer dependencia de la regla                                                |
+   |-------+------------------------------------------------------------------------------------------|
+   | $?    | Lista los nombres de las dependencias más recientes que el target, separadas por espacio |
+   |       | (recordemos lo del timestamp más reciente)                                               |
+   |-------+------------------------------------------------------------------------------------------|
+   | $^    | Similar a ~$?~ pero lista todas las dependencias, no compara contra el target            |
+   |-------+------------------------------------------------------------------------------------------|
+   | $*    | Target con el sufijo eliminado                                                           |
+   |-------+------------------------------------------------------------------------------------------|
+** Macro ($@) - Obtener target
+*** Conceptos
+    - La macro ~$@~ nos permite obtener el nombre del *target*
+*** Ejemplos
+**** Ejemplo 1 - Crear y nombrar un ejecutable de C
+     #+BEGIN_SRC makefile
+       # 1. "supongamos" que ya tenemos los targets OBJS, CC, ...
+       # 2. El -o es un parámetro de gcc para definir el nombre de ejecutable
+       # en este caso se llamará "unprograma" osea tal cual al target
+       unprograma: $(OBJS)
+         $(CC) $(CFLAGS) -o $@ $(OBJS)
+     #+END_SRC
+**** Ejemplo 2 - Imprimir con el comando echo
+     #+BEGIN_SRC makefile
+       # - imprimirá por pantalla el nombre del target!
+       # - el @ antes del echo es para no imprimir el comando echo,
+       # permite que se imprima solo el mensaje que el echo quiere imprimir
+       # - el $@ es la MACRO AUTOMATICA :) obtendrá el nombre del target
+       # es decir "unprograma"
+       unprograma:
+         @echo "el target se llama: " $@
+     #+END_SRC
+
+     #+RESULTS:
+     : unprograma:
+     :   @echo $@
+** Macro ($<) - Obtener primer dependencia
+*** Conceptos
+    - La macro ~$<~ obtiene *el primer archivo de dependencia* que *permitió que se ejecute la regla*
+    - elige la primer *dependencia*, la que esté más a la izquierda (/porque GNU Make lee las dependencias de izquierda a derecha/)
+*** Ejemplos
+**** Ejemplo 1 - Imprimir primer dependencia
+     #+BEGIN_SRC makefile
+       # - Siempre va a imprimir el nombe "main.o" porque es la primer dependencia
+       # - La macro $< elige la primer dependencia que hizo que se ejecutara
+       # la regla (la regla está formada por el target+dependencias+comando)
+       unprograma.c: main.o players.o items.o
+         @echo $<
+     #+END_SRC
+**** Ejemplo 2 - Compilar programa C
+     #+BEGIN_QUOTE
+     Recordemos que las *dependencias* van seguido del *target*,
+     en este caso se va a compilar un programa que usará sólo el archivo ~players.c~
+     #+END_QUOTE
+
+     #+BEGIN_SRC makefile
+       # - Se compilará un archivo llamado "programa.o"
+       # - La macro $< obtendrá unicamente la primer dependencia (players.c)
+       # - La segunda dependencia (players.h) nunca será usada por $<
+       # - La macro $@ obtiene el nombre del target (programa.o)
+       programa.o: players.c players.h
+         gcc -c $< -o $@
+
+       # codigo de abajo no cuenta para el ejemplo
+       init:
+         touch players.c players.h
+
+       .PHONY: clean
+       clean:
+         -rm *.{c,h}
+     #+END_SRC
+** Macro ($?) - Obtener las dependencias más recientes/actualizadas
+*** Conceptos
+    - La macro ~$?~ obtiene la *dependencia más reciente/actualizada*
+    - Elige la dependencia más reciente respecto ó comparado con el *target de la regla*
+    - Se *expande* cuando hay archivos más recientes que el target
+
+    #+BEGIN_QUOTE
+    Recordemos que *una dependencia representa un archivo*, y tenemos varias dependencias
+    entonces ~$?~ obtendrá el último archivo modificado, el que alteramos recientemente.
+
+    y que cada vez que compilemos un programa (con makefile), el *timestamp* del target se actualizará
+    #+END_QUOTE
+*** Ejemplo
+    #+BEGIN_QUOTE
+    Si modificamos solo dos achivos luego del ~make init~ se mostrarán los nombe de esos archivos,
+    (si cambiaramos el ~$?~ por ~$^~ mostraría todas las dependencias/archivos)
+    #+END_QUOTE
+
+   #+BEGIN_SRC makefile
+     # - La macro $? obtendrá sólo las dependencias más recientes
+     # - Se intentará compilar un archivo con los últimos .c modificados
+     main.o: main.c players.h players.c
+       gcc $? -c $@
+       @echo "Se compilaron los archivos" $?
+
+     # el codigo de abajo no cuenta para el ejemplo
+     init:
+       touch main.o main.c players.c players.h
+
+     .PHONY: clean
+     clean:
+       -rm *.{c,h}
+   #+END_SRC
+** Macro ($^) - Obtener TODAS las dependencias
+*** Conceptos
+    - La macro ~$^~ obtiene todas las dependencias, no le interesa si fue la más reciente o no
+*** Ejemplo
+    #+BEGIN_QUOTE
+    Si modificamos solo dos archivos luego del ~make init~ se mostrarán todos los nombre de los archivos,
+    no solo los recientemente modificados.
+    Si queremos sólo los más recientes respecto al *target* debemos usar la macro ~$?~
+    #+END_QUOTE
+
+   #+BEGIN_SRC makefile
+     # - La macro $^ obtendrá todas las dependencias
+     # - Se intentará compilar un archivo todos los .c y .h
+     main.o: main.c players.h players.c
+       gcc $^ -c $@
+       @echo "Se compilaron los archivos" $^
+
+     # el codigo de abajo no cuenta para el ejemplo
+     init:
+       touch main.o main.c players.c players.h
+
+     .PHONY: clean
+     clean:
+       -rm *.{c,h}
+   #+END_SRC
+** Macro @(F) y @(D) - Obtener directorio y archivo de un target
+*** Ejemplo
+    #+BEGIN_SRC makefile
+      ho/player/player.o: player/items.c player/account.c
+        @echo "Carpeta:" $(@D)
+        @echo "Archivo:" $(@F)
+
+      # el codigo de abajo no cuenta para el ejemplo
+      .PHONY: init
+      init: crearDirectorios crearArchivos
+        @echo "Terminamos de ejecutar las dependencias :)"
+
+      crearArchivos:
+        touch player/items.c player/account.c
+      crearDirectorios:
+        mkdir player
+
+      .PHONY: clean
+      clean:
+        -rm player/*.{c,o}
+    #+END_SRC
+** Macro ($*) - Obtener el valor de un patrón que coincidió (stem)
+  - Es el valor del objetivo que concide con el *patrón de objetivo*
+
+  #+BEGIN_QUOTE
+  Por ejemplo si el objetivo es ~player.c~ y el *patrón de objetivo* es ~%.c~
+  entonces la cadena ~player~ es la que obtiene la macro ~$*~
+  #+END_QUOTE
+* Macros con comodines
+* Macros de expansión simple y expansión recursiva
+** Conceptos
+  - Las *macros* NO siempre se *expanden* en el momento de *asignación*
+  - Algunas macros se *expanden* cuando son usadas en alguna *reglas*
+** Expansión simple de una macro con el operador :=
+*** Conceptos
+   - Si usamos el operador ~:=~ consideramos que la expansión de la macro será simple
+   - En una expansión simple, *la asignación del valor a la macro/variable es inmediata*
+   - "Podríamos" asociarlo con el término de *expansión ansiosa*
+*** Ejemplo
+     #+BEGIN_SRC makefile
+       # la asignación del valor "-O -Wall" a la macro "CFLAGS" es inmediata
+       # lo mismo para "CC"
+       CFLAGS := -O -Wall
+       CC := gcc
+
+       # OJO..! esta quizás no sería una buena decisión..
+       # porque las macros automáticas $@ y $* aún no tienen valor..
+       # hasta que se usen en alguna regla y le asocie un valor
+       DEPFLAGS := -MT $@ -MMD -MP -MF $*.d
+
+       programa.exe: main.o
+         $(CC) $(CFLAGS) -o $@
+
+       %.o: %.c %.d
+         $(CC) $(DEPFLAGS) $(CFLAGS) -c $*.c -o $@
+     #+END_SRC
+** Expansión única y recursiva con el operador =
+*** Conceptos
+   - Si usamos el operador ~=~ consideramos que la expansión de la macro será *recursiva*
+   - En una expansión recursiva, *la asignación del valor se realiza cuando la macro es usada*
+   - La macro se expande una única vez durante tiempo de ejecución
+   - "Podríamos" asociarlo con el término de *expansión perezosa* (no es inmediata, se dará cuando se evalúe la macro)
+*** Ejemplo
+     #+BEGIN_SRC makefile
+       UNO  = $(ESE)  # acá no se expande la macro "ESE"
+       ESE  = $(OTRO) # acá tampoco se expande la macro "OTRO"
+       OTRO = Pepito
+
+       # las macros se expanden en este momento, con la evaluación de la regla
+       culpable:
+         @echo $(UNO) # acá se expanden las macros recursivas
+     #+END_SRC
+* Sustitución temporal de cadenas en Macros
+** Conceptos
+  - Utilizado para cambiar la extensión de los archivos que tiene asociado una macro (Ej. ~$(OBJ:.o=.c)~ para reemplazar .o por .c)
+
+  #+BEGIN_QUOTE
+  Para sustituir una cadena de una macro de *forma temporal* usamos la siguiente sintáxis
+  ~$(nombreMacro:textoAsociado=nuevoTexto)~
+
+  Otra alternativa a la sintáxis anterior sería usar la función *patsubst* por ejemplo
+  ~$(patsubst textoAsociado, nuevoTexto, nombreMacro)~
+  #+END_QUOTE
+** Ejemplo
+  #+BEGIN_SRC makefile
+    INCLUDE := ./include
+    OBJ := game.o player.o item.o
+
+    game.exe: $(OBJ)
+      gcc -o game.exe $(OBJ)
+
+    # - temporalmente reemplazamos la extensión .o por .c de los archivos
+    # que están asociados a la macro OBJ
+    # - podríamos simplemente agregarlo en una macro SRC = $(OBJ:.o=.c)
+    # pero lo dejamos así para que se sobreentienda su uso
+    game.o: $(OBJ:.o=.c)
+      gcc -I$(INCLUDE) -c -o game.o $(OBJ:.o=.c)
+
+    player.o: player.c $(INCLUDE)/player.h
+      gcc -I$(INCLUDE) -c -o player.o player.c
+
+    item.o: item.c $(INCLUDE)/item.h
+      gcc -I$(INCLUDE) -c -o item.o item.c
+  #+END_SRC
