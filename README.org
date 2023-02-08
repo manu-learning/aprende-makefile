@@ -11,3 +11,26 @@
   - Los ~.h~ son archivos de cabecera (headers), se incluyen declaraciones de estructuras, variables globales y funciones (prototipos/firmas)
   - Los ~.c~ son archivos fuente, los que tienen la implementación del programa (de las funciones)
   #+END_QUOTE
+* Ejemplo Introductorio - Diagramas con Plantuml y Emacs
+** Instalación de Plantuml
+  #+BEGIN_SRC makefile
+    DOWNLOAD_VERSION=1.2023.1
+    DOWNLOAD_NAME=plantuml-$(DOWNLOAD_VERSION).jar
+    DOWNLOAD_URL=https://github.com/plantuml/plantuml/releases/download/v$(DOWNLOAD_VERSION)/$(DOWNLOAD_NAME)
+
+    download-plantuml:
+      $(info Descargando plantuml..)
+      cd ~ && curl -O $(DOWNLOAD_URL)
+  #+END_SRC
+** Configuración de Emacs
+  #+BEGIN_SRC elisp
+    ;; este lenguaje es elisp, no es necesario entenderlo para saber GNU Make
+    (setq org-plantuml-jar-path (expand-file-name "~/plantuml.jar"))
+    (add-to-list 'org-src-lang-modes '("plantuml" . plantuml))
+    (org-babel-do-load-languages 'org-babel-load-languages '((plantuml . t)))
+  #+END_SRC
+* Referencias
+** Referencias Oficiales
+   1. [[https://orgmode.org/worg/org-contrib/babel/languages/ob-doc-makefile.html][Makefile Source Code blocks in Org mode (orgmode.org)]]
+   2. [[https://plantuml.com/emacs][Plantuml integration with Emacs (plantuml.com)]]
+
