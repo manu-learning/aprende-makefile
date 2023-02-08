@@ -1,0 +1,13 @@
+#+TITLE: Guia Básica Makefile
+* Conceptos
+  - Se utiliza ~make~ para cualquier proyecto con *dependencias* entre archivos, no solo para compilar programas de C..
+  - En el lenguaje ~C~ la relación de dependencia es
+    1. Los ejecutables dependen de los file objects ~.o~
+    2. Los file objects ~.o~ dependen de su código fuente ~.c~ y de los archivos de cabecera ~.h~ que incluyan los ~.c~
+
+  #+BEGIN_QUOTE
+  Observaciones acerca de la compilación de programas con el lenguaje C
+  - Los archivos ~.o~ son objetos
+  - Los ~.h~ son archivos de cabecera (headers), se incluyen declaraciones de estructuras, variables globales y funciones (prototipos/firmas)
+  - Los ~.c~ son archivos fuente, los que tienen la implementación del programa (de las funciones)
+  #+END_QUOTE
