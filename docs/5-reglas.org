@@ -1,0 +1,365 @@
+#+TITLE: Reglas
+* Reglas
+** Conceptos
+  - Si una regla tiene una dependencia no existe => GNU Make buscará una regla que la cree (osea que esté como objetivo/target)
+  - Si una regla tiene archivos en las [[Dependencias][Dependencias]] que además son [[Target/Objetivo][Target/Objetivo]] de otras reglas, entonces
+    1) Primero se ejecuta la regla donde aparece como ~target~
+    2) Luego la regla donde aparece como ~dependencia~
+** Ejemplo Básico
+ #+BEGIN_SRC makefile
+   # La forma general de cada regla es de la forma
+   target: dependencias
+     comando1
+     comando2
+ #+END_SRC
+* Reglas Explícitas
+** Conceptos
+  - En las *reglas explícitas* le indicamos a GNU Make como construir el objetivo/target agregandole una ó varias *ordenes* que ejecutará
+  - La *orden* que agregamos para que se construya el objetivo/target se ejecutará luego que las dependencias se ejecuten ó bien se construyan
+** Ejemplos
+*** Ejemplo Básico - Poco eficiente, sin macros automáticas ni reglas implícitas
+   #+BEGIN_SRC makefile
+     # En este ejemplo, no estamos usando macro automáticas ni tampoco reglas implícitas,
+     # lo que implíca que tengamos un Makefile poco configurable, y no óptimo.
+     #
+     # Porque si agregaramos nuevos .c ó .h ó incluso si cambiaramos los nombre de estos,
+     # también deberíamos modificar este Makefile... Si lo llevamos a un proyecto más grande,
+     # con muchos archivos sería dificil de mantener, y poco extensible.. Existiría un gran
+     # nivel de acoplamiento entre el proyecto y este Makefile
+
+     PROGRAMA = calculadora # nombre del ejecutable
+     CC = gcc # compilador de c
+
+     # esta macro lo usaremos con el flag -I de gcc
+     # con -I podemos indicar la ruta de los .h que usan los .c
+     # si no indicamos la ruta al compilador gcc, éste fallará y no sabrá donde encontrar los .h
+     INCLUDE = ./include
+
+     # se podría hacer más genérico si usaramos wildcards + la función patsubst
+     OBJ = calculadora.o operaciones.o lib.o
+
+     # - primero se ejecutan las dependencias, osea se espera que se construyan los archivos .o
+     # - cuando las dependencias terminen, se ejecuta la orden que se agregó explícitamente
+     # - la orden es opcional, GNU Make la agrega implícitamente (ya sabe que la debería agregar)
+     $(PROGRAMA): $(OBJ)
+       $(CC) -o $(PROGRAMA) $(OBJ)
+
+     # siempre que alguna de las dependencias calculadora.c ó operaciones.h sea modificada,
+     # entonces se volverá a construir el objetivo (en este caso es el archivo calculadora.o),
+     # - podríamos optimizar la regla y quedara más genérica, si usaramos las macros automáticas como $@ y $^
+     calculadora.o : calculadora.c $(INCLUDE)/operaciones.h
+       $(CC) -I$(INCLUDE) -c -o calculadora.o  calculadora.c
+
+     # - se repite la misma situación que con la regla que tiene como objetivo/target a calculadora.o
+     # pero las dependencias cambian, y también los parámetros a gcc
+     # - podríamos optimizar la regla y quedara más genérica, si usaramos las macros automáticas como $@ y $^
+     operaciones.o : operaciones.c $(INCLUDE)/operaciones.h $(INCLUDE)/lib.h
+       $(CC) -I$(INCLUDE) -c -o operaciones.o operaciones.c
+
+     # - se repite la misma situación que con la regla que tiene como objetivo/target a calculadora.o
+     # pero las dependencias cambian, y también los parámetros a gcc
+     # - podríamos optimizar la regla y quedara más genérica, si usaramos las macros automáticas como $@ y $^
+     lib.o : lib.c $(INCLUDE)/lib.h
+       $(CC) -I$(INCLUDE) -c -o lib.o lib.c
+
+     # --------------------------------------------------
+
+     .PHONY: clean
+     clean:
+       @-rm *.o
+       @-rm $(PROGRAMA)
+
+     .PHONY: run
+     run: ; @./$(PROGRAMA)
+   #+END_SRC
+*** Ejemplo - Más Optimo
+   #+BEGIN_SRC makefile
+     PROGRAMA = calculadora.exe
+     CC = gcc
+     CFLAGS = -I$(INCLUDE) # para que el compilador gcc sepa donde encontrar los .h
+     INCLUDE = ./include
+
+     # SRC = calculadora.c operaciones.c lib.c
+     SRC = $(wildcard *.c) # obtiene todos los archivo fuente .c
+     OBJ = $(SRC:.c=.o) # reemplazamos la extensión de los archivos .c a .o de la macro SRC
+
+     # -----------------------------------------------------------------
+
+     # (1) REGLA EXPLÍCITA
+     #
+     # - Esta es una Regla Explícita, porque le indicamos a GNU Make
+     # como debe construir el objetivo "calculadora.exe"
+     # con la orden "$(CC) $(CFLAGS) -o $@ $^"
+     # - El objetivo es construir el binario "calculadora.exe"
+     # - Las dependencias son los archivos .o
+     $(PROGRAMA): $(OBJ)
+       $(CC) -o $@ $^
+
+     # -----------------------------------------------------------------
+
+     # (1) REGLA IMPLÍCITA
+     #
+     # - La siguiente es una Regla Implícita, y hace lo mismo que la regla explícita anterior,
+     # funciona porque GNU Make entiende que implícitamente debe agregar la orden
+     # que usabamos antes "$(CC) -o $@ $^"
+     # - Usar ésta ó la otra forma, pero no ambas, porque no tendría sentido
+
+     $(PROGRAMA): $(OBJ)
+     #  $(CC) -o $@ $^ # <- lo comentamos porque como dijimos más arriba, no sería necesario
+
+     # -----------------------------------------------------------------
+
+     # (3) REGLAS IMPLÍCITAS
+     #
+     # - Estas otras también son reglas implícitas,
+     # porque no tienen una orden que le diga a GNU Make como debe construir los objetivos
+     # - En este caso los objetivos a construir son los archivos .o,
+     # y las dependencias son los archivos de cabecera .h que necesitan
+     # - Podríamos no agregar estas reglas, e igual compilaría el programa calculadora.exe
+     # pero son necesarias si queremos que los objetivos sean reconstruidos
+     # en caso que alguna de sus dependencias (los .h) son actualizadas
+     #
+     # Ej.
+     # Si no tuvieramos estas reglas, e hicieramos cambios en operaciones.h ó lib.h,
+     # entonces GNU Make al leer la regla "$(PROGRAMA): $(OBJ)" (ó bien si quisieramos dejar su forma explícita)
+     # dirá que el objetivo "calculadora.exe" ya está actualizado, y no volverá a construirlo
+     # porque las dependencias .o de esa regla no actualizarían,
+     # y el timestamp del objetivo y esas dependencias estarían el mismo...
+     #
+     # en cambio si agregamos estas reglas, e hicieramos cambios en operaciones.h ó lib.h,
+     # entonces GNU Make volvería a construir los archivos .o (que en estas reglas son objetivos/target)
+     # y en la regla "$(PROGRAMA): $(OBJ)" el objetivo $(PROGRAMA) estaría desactualizado
+     # (por comparar el timestamp de modificación del objetivo y sus dependencias),
+     # por tanto volvería a construirlo también
+     calculadora.o: operaciones.h
+
+     operaciones.o: operaciones.h lib.h
+
+     lib.o: lib.h
+   #+END_SRC
+* Reglas Implícitas
+** Conceptos
+  - En las *reglas implícitas* es el Makefile quien debe interpretar como construir el objetivo/target
+  - Utiliza el concepto de *implicit pattern rules* (patrón de reglas implícitas)
+** Ejemplo
+  #+BEGIN_SRC makefile
+    PROGRAMA = calculadora
+    CC = gcc
+    # no interesa si la macro "INCLUDE" se define antes ó después de CFLAGS,
+    # porque el valor de ésta se asigna a la macro CFLAGS cuando se ejecute la orden de regla en donde se use CFLAGS
+    # GNU Make lee bottom-up
+    CFLAGS = -I$(INCLUDE)
+    INCLUDE = ./include
+
+    #SRC = calculadora.c operaciones.c lib.c
+    SRC = $(wildcard *.c) # buscará en el directorio todas las entradas/archivos que tengan como extensión .c
+    OBJ = $(SRC:.c=.o) # reemplazamos los .c en .o, otra alternativa sería usar la función patsubst de make
+
+    # (1) Regla Explícita
+    # Indicamos a GNU Make como debe construir el objetivo "calculadora"
+    # 1. Agregamos las dependencias (los archivos que necesita para generar el objetivo)
+    # 2. Definimos la orden (la sentencia donde compilamos con gcc)
+    #
+    # Nota: Esta regla explícita, podría ser implícita porque podriamos borrar la orden "$(CC) -o $@ $^"
+    # y de igual manera GNU Make sabría como interpretar la regla, y que debe agregar por defecto la orden anterior
+    $(PROGRAMA): $(OBJ)
+      $(CC) -o $@ $^
+
+    # (3) Reglas implícitas
+    # - Son implícitas, porque no le indicamos a GNU Make como construir el objetivo (en este caso los archivos .o)
+    # es decir no tienen una orden/comando.. Estan formadas por target+dependencias
+    # - En estas reglas los objetos (.o) son objetivos/target, le agregamos dependencias (en este caso archivos cabecera .h de los que dependen)
+    # - Las definimos para que si algún archivo de cabecera (.h) se actualiza,
+    # entonces GNU Make entienda que debe reconstruir los objetivos (en este caso archivos .o) que dependen de esos archivos .h
+    #
+    # Ej. si se actualiza operaciones.h, entonces make volverá a construir los objetivos operaciones.o y calculadora.o pero no lib.o
+    calculadora.o : $(INCLUDE)/operaciones.h
+    operaciones.o : $(INCLUDE)/operaciones.h $(INCLUDE)/lib.h
+    lib.o : $(INCLUDE)/lib.h
+
+    # --------------------------------------------------
+
+    # - Agregamos el @ para que no se imprima el comando en la terminal
+    # - Usamos el - para que en caso de fallar la instrucción "rm", se siga ejecutando
+    # (si no lo usamos, fallará porque no exista algún .o ó el binario y no borrará el resto de los archivos)
+    .PHONY: clean
+    clean:
+      @-rm *.o
+      @-rm $(PROGRAMA)
+
+    # - Usamos el ; porque para cumplir este objetivo no se requiere dependencias
+    .PHONY: run
+    run: ; @./$(PROGRAMA)
+  #+END_SRC
+* Reglas de Patrón - Pattern Rules
+** Conceptos
+  - Una *regla de patrón* difiere de una regla común, en que el objetivo/target a construir contiene el caracter ~%~ (sólo uno)
+  - El símbolo ~%~ puede representar uno ó varios caracteres cualquiera, para formar el nombre de un archivo con una extensión específica (Ej. %.c, %.h, etc)
+  - Una *regla implícita de patrón* se puede aplicar a cualquier objetivo/target que coincida/matchee con su patrón (y las dependencias que matcheen deben existir)
+** Como se utiliza el símbolo %
+  - La manera más común es ~%.extensionObjetivo : %.extensionDependencias~
+    - los archivos que son *dependencia* se usarán para construir el objetivo/target,
+    - pudiendo haber varias dependencias con ~%~
+
+  #+BEGIN_QUOTE
+  Por ejemplo ~%.o : %.c comun.h~ en esa regla de patrón
+  - el objetivo/target a construir son archivos con extensión .o (objetos)
+  - las dependencias (archivos .c que deben existir) que coincidan con el patrón del objetivo (fichero .o) se usarán para construir el objetivo
+  - podríamos agregar como rutina ~gcc -c $< -o $@~ para construir los objetos a partir de los .c y el archivo comun.h
+  - se construirá el objetivo siempre que se actualicen las dependencias (gnu make compara el timestamp del target/objetivo y sus dependencias)
+  #+END_QUOTE
+** Ejemplo Básico
+  #+BEGIN_SRC makefile
+    OBJ = main.o player.o item.o
+
+    # (3) reglas implícitas
+    game.exe: $(OBJ)
+    # al escribir estas dos reglas implícitas, estamos reescribiendo la regla de patrón implícita
+    # para cuando GNU Make tenga que construir los objetivos player.o e item.o
+    # sepa que debe agregar como dependencia esos archivos .h
+    # (otra opción sería agregar a la regla de patrón la dependencia %.h, y esto no sería necesario
+    # aunque también debería existir el archivo main.h)
+    player.o: ./include/player.h
+    item.o: ./include/item.h
+
+    # - estas otras 3 reglas implícitas no serían necesarias,
+    # ya que lo hace la regla de patrón implícita, para cualquier objetivo .o
+    #
+    # main.o: main.c
+    # player.o: player.c
+    # item.o: item.c
+
+    # REGLA DE PATRÓN
+    # - En realidad es una regla de patrón implícita,
+    # porque GNU Make ya sabe que debe hacer esto.. para construir objetivos .o
+    %.o : %.c
+      $(CC) -I./include -c $< -o $@
+  #+END_SRC
+** Ejemplos
+*** Ejemplo 1 - Regla Explícita de Patrón Vs Regla Implícita De Patrón
+  #+BEGIN_SRC makefile
+    MD_FILES = $(wildcard *.md)
+    HTML_FILES = $(MD_FILES:.md=.html)
+
+    # REGLA EXPLICITA DE PATRON que podría ser REGLA IMPLICITA DE PATRON
+    #
+    # 1. Es una regla de patrón por tener el símbolo % que actúa como el asterisco en una regex
+    #
+    # 2. Es una regla explícita porque explícitamente le estamos indicando la orden/comando "$(CC) -o $@ $<"
+    # para que GNU Make entienda como construir un objetivo .o a partir de archivos fuente .c
+    # (en el siguiente parrafo aclaramos porque podría no ser necesario agregar dicha orden)
+    #
+    # 3. Podría ser una regla implícita porque GNU Make ya sabe como construir archivos .o a mediante ficheros .c
+    # e implícitamente aplica la orden que pusimos "$(CC) -o $@ $<"
+    # por tanto podríamos remover ese comando quedando sólo "%.o:%.c"
+    #
+    # 4. El motivo para que esta orden sea una Regla Explícita, sería si quisieramos redefinir
+    # la manera en que GNU Make debe construir el objetivo
+    # (Ej. con alguna configuración adicional que no contemplan las macros predefinidas CC, CFLAGS, ...)
+    %.o : %.c
+      $(CC) -o $@ $<
+
+    # ----------------------------------------------------------
+
+    # REGLA EXPLICITA DE PATRON <- Arrojará error, porque el patrón del objetivo no coincide con la regla
+    #
+    # En este ejemplo la regla DEBE ser explícita, porque GNU Make no podría agregar implícitamente
+    # la orden "pandoc --to html5 -o $@ $<" para crear un .html a partir de un .md
+    #
+    # - El patrón del objetivo/target a construir es .md=.html
+    # - La regla de patrón %.html:%.org NO coincide/matchea con el patrón del objetivo .md=html
+    $(HTML_FILES):%.html:%.org
+      pandoc --to html5 -o $@ $<
+  #+END_SRC
+*** Ejemplo 2 - Convertir archivos org-mode a html
+   #+BEGIN_SRC makefile
+     ORG_FILES = $(wildcard *.org) # obtenemos los archivos .org de la ruta en donde esté el makefile
+     HTML_FILES = $(ORG_FILES:.org=.html) # reemplazamos la extensión, sólo reemplaza una parte del string
+
+     # otra manera sería usando la función patsubst
+     # HTML_FILES = $(patsubst %.org, %.html, $(ORG_FILES))
+
+     .PHONY: all
+     all: $(HTML_FILES)
+     $(HTML_FILES): %.html: %.org # la regla de patrón debe coincidir con el valor del target cuando éste se va expandiendo
+       @echo "Convirtiendo con pandoc el $< a $@" # simulamos que hacemos la conversión del archivo .org a .html
+   #+END_SRC
+*** Ejemplo 3 - Compilar código fuente C en objetos
+   #+BEGIN_SRC makefile
+     # el % reemplaza cualquier caracter
+     %.o: %.c
+       $(CC) -c $< -o $@
+   #+END_SRC
+* Reglas de Patrón Estáticas
+** Conceptos
+  - Una *Regla de Patrón Estática* es una *regla de patrón* a la que le agregamos un target donde se debe aplicar la regla
+** Ejemplo Básico
+  #+BEGIN_SRC makefile
+    # La sintáxis regla de patrón estática es:
+    #
+    # objetivos: patron_objetivo: patron_dependencias
+    #		ordenes
+
+    OBJ = calculadora.o operaciones.o
+
+    $(OBJ): %.o: %.c $(INCLUDE)/%.h
+      gcc -I$(INCLUDE) -c $< -o $@
+      @echo "target=$@ , primer dependencia=$<"
+  #+END_SRC
+** Ejemplo
+  #+BEGIN_SRC makefile
+    INCLUDE = ./include
+    OBJ = calculadora.o operaciones.o
+
+    calculadora: $(OBJ)
+      # esta orden la agrega de forma implícita GNU Make, por tanto es opcional agregarla
+      gcc -o $@ $^
+      @echo "target=$@ , dependencias=$^"
+
+    # reescribimos la regla de patrón estática pero para el objetivo "calculadora.o",
+    # le agregamos una nueva dependencia lib.h para que se reconstruya calculadora.o
+    # en caso de que se actualice el archivo de cabecera lib.h
+    calculadora.o: ./include/lib.h
+
+    # no sería necesario escribir esta regla, ya la genera nueva regla de patrón estática
+    #operaciones.o: operaciones.c ./include/operaciones.h
+
+    # REGLA DE PATRON ESTATICA
+    #
+    # - Esta regla de patron estática sólo aplica para las dependencias calculadora.c, calculadora.h,
+    # operaciones.c y operaciones.h. Todas esas archivos deben existir, caso contrario GNU Make dirá
+    # que no pudo encontrar alguna de ellas.
+    $(OBJ): %.o: %.c $(INCLUDE)/%.h
+      # esta orden la agrega de forma implícita GNU Make, por tanto es opcional agregarla
+      gcc -I$(INCLUDE) -c $< -o $@
+      @echo "target=$@ , primer dependencia=$<"
+
+    # GNU Make interpretará la anterior regla de patrón estática de la sig. manera:
+    #
+    # calculadora.o: calculadora.c ./include/calculadora.h ./include/lib.h <-- aparece lib.h xq reescribimos la regla para calculadora.o
+    # 	gcc -I./include -c calculadora.c -o calculadora.o
+    #		@echo "target=calculadora.o , primer dependencia=calculadora.c"
+    #
+    # operaciones.o: operaciones.c ./include/operaciones.h
+    # 	gcc -I./include -c operaciones.c -o operaciones.o
+    #		@echo "target=operaciones.o , primer dependencia=operaciones.c"
+
+    #---------------------------------------------------------------------------------------------
+
+    # Si a la anterior regla de patrón estática le sacaramos el target $(OBJ) quedando solo %.o : %.c %.h
+    # entonces quedaría una regla de patrón simple, y aplicaría para cualquier .c que coincida con el patrón del objetivo .o
+    #
+    # Ej.
+    # Supongamos que también estaba el archivo fuente funciones.c y sus respectivo archivo de cabecera funciones.h
+    # entonces esta regla de patrón sin el $(OBJ) haria que GNU Make lo interprete como hacía con calculadora.o y operaciones.o
+    #
+    # funciones.o: funciones.c ./include/funciones.h
+    # 	gcc -o funciones.o funciones.c
+    #		@echo "target=funciones.o , primer dependencia=funciones.c"
+    #
+  #+END_SRC
+* Referencias
+** Referencias Oficiales
+  1. [[https://www.gnu.org/software/make/manual/make.html#Implicit-Variables][Introduction to Pattern Rules (gnu.org)]]
+** Referencias Extraoficiales
+  2. [[https://www.it.uc3m.es/~pedmume/asignaturas/2005/LAO/Lab2/tutorial4/node6.html][Macros, reglas implícitas, directivas condicionales (it.uc3m.es)]]
