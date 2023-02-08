@@ -1,0 +1,93 @@
+#+TITLE: Ejemplos Interesantes
+* Expresividad - Lineas muy extensas
+** Conceptos
+  - Si tenemos lineas muy extensas podemos usar el carácter ~\~ al igual que en ~bash~
+** Ejemplo Básico
+  #+BEGIN_SRC makefile
+    main.o: main.c players.h monsters.h items.h \
+    configs.h events.h messages.h
+  #+END_SRC
+* Generar varios ejecutables
+** Conceptos
+  - Podemos usar ~all~ (se considea un *falso target*) cuando tenemos reglas para varios ejecutables,
+  - Si no agregamos este target, sólo se ejecutará la regla 1
+    (porque es el target final, y la regla 2 no es una dependencia de ella)
+
+  #+BEGIN_QUOTE
+  Recordemos que ~GNU Make~
+  1) siempre considera la primera regla como el [[Target Final]] (el ejecutable, por lo general llamado ~all~)
+  2) pero si la "regla 2" NO es una *dependencia* de esa primera regla, entonces no la ejecutará
+  #+END_QUOTE
+** Ejemplo Básico
+  #+BEGIN_SRC makefile
+    # hacemos que se ejecuten ambos por separado
+    # porque no dependen entre ellos
+    all: programa1 programa2
+
+    # regla 1
+    programa1: main.o players.o items.o
+      gcc -o programa1 main.o players.o items.o
+
+    # regla 2
+    programa2: server.o configs.o
+      gcc -o programa2 server.o configs.o
+  #+END_SRC
+* Comandos en Shell diferentes
+** Conceptos
+   - Cada comando se ejecuta en una ~shell~ diferente
+
+   #+BEGIN_QUOTE
+   Un error común al escribir Makefile es usar el comando ~cd~ sin el operador ~&~
+   Supongamos que escribimos una regla con los siguientes comandos en orden
+   1) ~cd ~/Videos~
+   2) ~mkdir clases-grabadas~
+
+   Si el resultado deseado era acceder a la ruta ~/Videos~ y luego crear una carpeta ~clases-grabadas~,
+   pero el resultado será que creará la carpeta ~clases-grabadas~ en la ruta relativa dónde se ejecutó el ~Makefile~
+
+   Esto ocurre porque
+   - cada linea de una regla de Makefile se ejecuta en una ~shell~ diferente,
+   - su ejecución es "independiente" entre si
+   - independiente entre comillas porque si alguna lanza una excepción como error.. éste se propagará, haciendo fallar la ejecución del Makefile
+
+   Si el resultado deseado quizás era acceder a la ruta ~/Videos~ y luego crear una carpeta ~clases-grabadas~,
+   deberíamos hacer ~cd ~/Videos && mkdir clases-grabadas~
+   #+END_QUOTE
+** Ejemplo Básico
+  #+BEGIN_SRC makefile
+    programa: players/items.c
+      @cd players # se ejecuta en otra shell
+      gcc items.c -o $@ # se ejecuta en otra shell
+
+    comando:
+      @cd test; echo `pwd` # se ejecutan en la misma shell, imprimirá la ruta de la carpeta /test
+      @echo `pwd` # éste se ejecuta en otra shell, imprimirá la ruta actual del makefile
+  #+END_SRC
+* Prioridad entre target y dependencia
+** Conceptos
+   - GNU Make lee las dependencias de izquierda a derecha, y ejecuta las reglas en forma de bottom-up
+** Ejemplo Básico
+   #+BEGIN_QUOTE
+   En este ejemplo, los *targets* son main.o, players.o, monsters.o
+
+   El ~main.o~ aparece en dos reglas
+   1. En la primera regla aparece como *dependencia*
+   2. En la segunda regla aparece como *target* (esta se ejecutará primero)
+   #+END_QUOTE
+
+   #+BEGIN_SRC makefile
+     juegito: main.o players.o monsters.o
+       gcc -o juegito main.o players.o monsters.o
+
+     main.o: main.c players.h players.c monsters.o
+       gcc -c main.c
+
+     players.o: players.c players.h
+       gcc -c players.c
+
+     monsters.o: monsters.c monsters.h
+       gcc -c monsters.c
+   #+END_SRC
+* Tips para Comandos de Linux
+  - Usamos ~mkdir -p nombreDirectorio~ con el parámetro ~-p~ para evitar error si el directorio existe
+  - Ejecutamos ~rm -rf ruta/*{.d,.tmp.d}~ con las llaves para extensiones específicas en la misma ruta
