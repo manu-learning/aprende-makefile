@@ -1,0 +1,160 @@
+#+TITLE: Target - Objetivo - GOAL
+* Conceptos
+  - Cada *target* representa el *nombre del archivo* que se generará, luego de cumplirse la regla asociada
+  - El *target* se actualiza si alguna de las dependencias fue actualizada (/make compara el timestamp de los headers de los archivos/)
+  - Si el target está desactualizado respecto de sus dependencias => se ejecutará la regla
+* TODO Default Target
+* Target Final
+  - Es la primera regla del makefile y tiende a ser el ejecutable
+  - Es el último *target* en el *árbol de dependencias* por tanto el último que se ejecuta
+  - Por convención lo nombran ~all~
+* Falso target
+** Conceptos
+   + No se les suele agregar [[Dependencias][Dependencias]]
+   + Cuando queremos que la regla se ejecute siempre (/evitamos que compare el timestamp del target y las dependencias/)
+   + Es un target que no existe (/porque un target tiende a representar un archivo físico que persiste en disco/)
+   + Make nota que no aparece el archivo en las entradas del directorio donde esté el Makefile, entonces ejecuta los comandos que generan la regla
+** Problemas
+   #+BEGIN_QUOTE
+   Un posible problema sería si agregamos un *falso target* y en el directorio existe un fichero con ese nombre.
+
+   Porque al no tener *dependencias* el ~make~ interpretará que el archivo está actualizado,
+   y no ejecutará los *comandos* de la *regla*
+
+   La solución a esto es utilizar ~PHONY~ (representa a un *target ficticio*)
+   #+END_QUOTE
+** Ejemplos
+   #+BEGIN_SRC makefile
+     # este es un ejemplo típico de un "falso target", que borra los archivos .o de fichero c compilado
+     # - porque "clean" no es un archivo en si (no debería)
+     # - la regla tampoco tiene dependencia (lo que se agrega seguido de los dos puntos)
+     clean:
+       rm *.o
+
+     # Podemos usar .PHONY
+     # para evitar problemas si llegase a existir un archivo "clean"
+     .PHONY: clean
+     clean:
+       rm *.o
+   #+END_SRC
+* Target Ficticio/Simbólico - Phony
+** Conceptos
+   - Soluciona el problema de los *falsos target* (/que exista un archivo con el mismo nombre del target/)
+   - Se antepone ~.PHONY~ previo a definir una regla, seguido al nombre del *falso target* (Ej. ~.PHONY: all~)
+   - Los casos comunes son ~.PHONY: all clean~
+** Falsos Targets como subrutinas
+   #+BEGIN_QUOTE
+   Por ejemplo si convertimos un *falso target* en un *target ficticio*,
+   y a ese *falso target* le agregamos como dependencia otro *falso target* la regla siempre se cumple.
+   Por tanto podemos usar los *falsos targets* como subrutinas a ejecutar.
+
+   Recordando que cuando decimos un *falso target* es aquél que no representa a un archivo físico en si
+   - ~archivo.c~ podría ser un target común representa un *archivo físico*
+   - ~clean install help~ se clasifican como un *falso target*
+   #+END_QUOTE
+** Diferencia con un target común
+   - En un *target ficticio* el *comando asociado a la regla* se ejecutará antes que *la dependencia*
+   - En un *target ficticio* (se convierte en ficticio cuando lo incluimos en ~.PHONY~)
+     1) se ejecuta el comando de la regla
+     2) luego se evalúa la dependencia
+   - En un *target común*
+     1) se cumple la regla (se ejecutan todas las dependencias)
+     2) luego el comando asociado (/Ej. borrar un archivo, crear un archivo, ejecutar un contenedor, .../)
+** Tabla comparativa Targets ficticios más utilizados
+   |---------+----------------------------------------------------------------------------|
+   | Target  | Descripción                                                                |
+   |---------+----------------------------------------------------------------------------|
+   | all     | Ejecuta todas las tareas de la aplicación (Ej. clean, check, install, ...) |
+   | install | Crea una instalación a partir de binarios                                  |
+   | clean   | Borra todos los archivos binarios                                          |
+   | check   | Ejecutar tests asociados a la aplicación                                   |
+   | info    | Generar documentación a partir del código fuente de la app                 |
+   | ctags   | Imprimir las firmas de las funciones implementadas                         |
+   |---------+----------------------------------------------------------------------------|
+** Ejemplos
+*** Ejemplo 1 - Limpiar archivos compilados
+    #+BEGIN_SRC makefile
+      # Si usamos .PHONY
+      # evitamos problemas si llegase a existir un archivo "clean"
+      # (osea que un fichero con el mismo nombre que el "falso target")
+      .PHONY: clean
+      clean:
+        rm *.o
+    #+END_SRC
+*** Ejemplo 2 - Compilar programas
+    #+BEGIN_SRC makefile
+      .PHONY: all
+      all: programa1, programa2
+
+      programa1: main.o archivo1.o archivo2.o
+        gcc -o programa1 main.o archivo1.o archivo2.o
+
+      programa2: main.o archivo1.o archivo3.o
+        gcc -o programa2 main.o archivo1.o archivo3.o
+    #+END_SRC
+*** Ejemplo 3 - Subrutinas
+    #+BEGIN_QUOTE
+    Este ejemplo lo podemos ejecutar con ~makefile cleanall~
+    donde se ejecutarán las subrutinas de borrar los archivos de tipo object
+    y luego los de texto
+    #+END_QUOTE
+
+    #+BEGIN_SRC makefile
+      .PHONY: cleanall cleanobj cleantxt
+      cleanall: cleanobj cleantxt
+        rm miprograma
+
+      cleanobj:
+        rm *.o
+
+      cleantxt:
+        rm *.txt
+    #+END_SRC
+* Target de Seguimiento
+** Conceptos
+   - Para marcar el último momento en el que se produjo un evento
+   - Útiles cuando en una regla usamos comandos que sólo generan que no generan efecto, como sería el devolver un output (Ej. cat, echo, printf, ...)
+   - Consiste en crear un archivo vacío (el target) del que sólo se usa su *timestamp* de creación
+   - Para obtener los archivos modificados más recientes (/los compara contra el target/) y usar sus nombres con algún comando que no genere efecto
+   - El ~$?~ se *expande* por las *dependencias* (osea archivos) cuyo *timestamp* sea más reciente que *target*
+** Ejemplo
+   - En este ejemplo el ~$?~ se expandirá por los archivos más recientes que ~imprime_actualizados~
+
+   #+BEGIN_QUOTE
+   Supongamos que ya habiamos creado los archivos main.c, jugadores.c, items.c
+
+   Primero ejecutamos ~make imprime_actualizados~ y se construirá el ejecutable imprime_actualizados
+
+   Si modificamos alguno de los .c y volvemos a ejecutar el comando anterior,
+   se ejecutará el ~cat nombreArchivo~ de los modificados recientemente
+   y se volverá a crear el ejecutable imprime_actualizados con ~touch imprime_actualizados~
+   (este ejecutable no tiene información útil, sólo la fecha del último archivo actualizado en su header)
+   #+END_QUOTE
+
+   #+BEGIN_SRC makefile
+     # Si no crearamos el archivo con "touch",
+     # el target estaría siempre desactualizado,
+     # porque "cat" y "echo" no generan efecto, sólo devuelven un output no crean un archivo,
+     # por lo cual $? compararía contra un target outdate (desactualizado)
+
+     # - con "cat" imprimimos contenido de un archivo
+     # - el $? se expande con los archivos de timestamp mas reciente que imprime_actualizados
+     # - imprimimos el contenido de los archivos actualizados/modificados
+     # es decir su timestamp es más reciente que el del archivo imprime_actualizados
+     imprime_actualizados: main.c jugadores.c items.c
+       cat $?
+       touch imprime_actualizados
+
+     # Otro ejemplo..
+     # Podemos ver los nombres de los archivos .c actualizados recientemente,
+     # creamos el cfiles_actualizados
+     cfiles_actualizados: *.[c]
+       @echo $?
+       touch cfiles_actualizados
+   #+END_SRC
+* Referencias
+** Referencias Oficiales
+  1. [[https://www.gnu.org/software/make/manual/html_node/Goals.html][Goals (gnu.org)]]
+  2. [[https://www.gnu.org/software/make/manual/html_node/Special-Variables.html][Special variables (gnu.org)]]
+** Referencias Issues
+  1. [[https://stackoverflow.com/questions/27242905/makefile-all-vs-default-targets][Makefile all Vs default targets (stackoverflow.com)]]
