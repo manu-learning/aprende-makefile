@@ -29,8 +29,50 @@
     (add-to-list 'org-src-lang-modes '("plantuml" . plantuml))
     (org-babel-do-load-languages 'org-babel-load-languages '((plantuml . t)))
   #+END_SRC
+** Referencias
+*** Referencias Oficiales
+    1. [[https://orgmode.org/worg/org-contrib/babel/languages/ob-doc-makefile.html][Makefile Source Code blocks in Org mode (orgmode.org)]]
+    2. [[https://plantuml.com/emacs][Plantuml integration with Emacs (plantuml.com)]]
+
+* Libros Referentes
+  1. https://www.oreilly.com/openbook/make3/book/
 * Referencias
 ** Referencias Oficiales
-   1. [[https://orgmode.org/worg/org-contrib/babel/languages/ob-doc-makefile.html][Makefile Source Code blocks in Org mode (orgmode.org)]]
-   2. [[https://plantuml.com/emacs][Plantuml integration with Emacs (plantuml.com)]]
-
+  1. [[https://www.gnu.org/software/make/manual/make.html][GNU Make Manual (gnu.org)]]
+  2. [[https://www.gnu.org/software/make/manual/html_node/Static-Usage.html][Static Usage (gnu.org)]]
+  3. [[https://gcc.gnu.org/onlinedocs/gcc/Link-Options.html][GCC - Link Options (gcc.gnu.org)]]
+  4. [[https://www.gnu.org/software/make/manual/html_node/Implicit-Variables.html][Implicit Variables (gnu.org/make)]]
+** Referencias de Universidades
+   1. [[http://profesores.elo.utfsm.cl/~agv/elo320/makefile/makefile.html][Manejo de Proyectos a traves de Makefiles (Universidad Técnica Federico Santa Maria - profesores.elo.utfsm.cl)]]
+  10. [[http://www.mathcs.emory.edu/~cheung/Courses/255/Syllabus/1-C-intro/make.html][The Make (UNIX) Utility (Emory College of Arts and Sciences - mathcs.emory.edu)]]
+  10. [[https://www.it.uc3m.es/~pedmume/asignaturas/2005/LAO/Lab2/tutorial4/make.html][Construcción de archivos makefile (Universidad Carlos III de Madrid - it.uc3m.es)]]
+  12. [[https://courses.cs.duke.edu/cps108/doc/makefileinfo/sample.html][A sample makefile and how it works (Duke University - courses.cs.duke.edu)]]
+** Referencias Extraoficiales
+  1. [[https://devhints.io/makefile][Makefile cheatsheet (devhints.io)]]
+  2. [[https://www.zator.com/Cpp/E1_4_0a.htm][Utilidad Make, construir proyectos grandes (zator.com)]]
+  3. [[https://makefiletutorial.com/][Learn Makefiles (makefiletutorial.com)]]
+  4. [[http://nuclear.mutantstargoat.com/articles/make/][Practical Makefiles, by Example (nuclear.mutantstargoat.com)]]
+  5. [[https://www.thegeekstuff.com/2012/10/gcc-compiler-options/][Most frequently used gcc cmd line options (thegeekstuff.com)]]
+  6. [[http://make.mad-scientist.net/papers/advanced-auto-dependency-generation/][Advanced auto dependency generation (make.mad-scientist.net)]]
+  7. [[https://scottmcpeak.com/autodepend/autodepend.html][Autodependencies with GNU Make (scottmcpeak.com)]]
+  8. [[https://www.oreilly.com/library/view/managing-projects-with/0596006101/ch03.html][Variables and Macros - Managing Projects with GNU Make (oreilly.com)]]
+  9. [[https://www.fatalerrors.org/a/gnu-makefile-generation-of-dependency-rules-for-c-c-header-files.html][Generation of dependency rules (fatalerrors.org)]]
+  10. [[https://swcarpentry.github.io/make-novice/reference.html][Automation and Make (swcarpentry.github.io)]]
+  11. [[https://earthly.dev/blog/make-flags/][Understanding and using makefile Flags (earthly.dev)]]
+  12. [[https://slideplayer.com/slide/7540240/][Introduction How to Use Makefiles (sliderplayer.com)]]
+  13. [[https://jjmerelo.medium.com/dos-o-tres-cosas-que-posiblemente-no-sepas-sobre-gnu-make-65f245f1c640][Cosas que posiblemente no sepas sobre gnu make #1 (jjmerelo.medmium.com)]]
+  14. [[https://jjmerelo.medium.com/dos-o-tres-cosas-m%C3%A1s-que-posiblemente-no-sepas-sobre-gnu-make-9e012488e12a][Cosas que posiblemente no sepas sobre gnu make #2 (jjmerelo.medmium.com)]]
+  15. [[https://www.islabit.com/94440/comando-ar-de-linux-usalo-para-crear-bibliotecas-estaticas.html][Comando AR, para crear bibliotecas estáticas (islabit.com)]]
+** Referencias Issues
+   1. [[https://www.py4u.net/discuss/87388][Makefile vpath not working for header files (py4u.net)]]
+   2. [[https://stackoverflow.com/questions/34219186/what-is-the-difference-between-and-in-a-makefile][What is the difference between % and * (stackoverflow.com)]]
+   3. [[https://stackoverflow.com/questions/16751611/a-makefile-with-multiple-executables/16751650#16751650][A makefile with multiple executables (stackoverflow.com)]]
+   4. [[https://stackoverflow.com/questions/48110661/how-to-add-headers-to-a-makefile][How to add headers to a Makefile (stackoverflow.com)]]
+   5. [[https://stackoverflow.com/questions/2394609/makefile-header-dependencies][Makefile header dependencies (stackoverflow.com)]]
+   6. [[https://stackoverflow.com/questions/13897945/wildcard-to-obtain-list-of-all-directories][Wildcard to obtain list of all directories (stackoverflow.com)]]
+   7. [[https://stackoverflow.com/questions/4036191/sources-from-subdirectories-in-makefile/4038459][Sources from subdirectories in makefile (stackoverflow.com)]]
+   8. [[https://stackoverflow.com/questions/7539563/is-there-a-smarter-alternative-to-watch-make][Alternative to watch make (stackoverflow.com)]]
+   9. [[https://stackoverflow.com/questions/27318702/makefile-silence-the-maken-line-specifically][Makefile silence the maken line specifically (stackoverflow.com)]]
+   10. [[https://stackoverflow.com/questions/27242905/makefile-all-vs-default-targets][Defining a default target, first target Vs .DEFAULT_GOAL (stackoverflow.com)]]
+** Referencias Youtube
+  1. [[https://www.youtube.com/watch?v=E_ih19uktac][Module 05, Lecture 43 - Makefiles (by nptelhrd)]]
