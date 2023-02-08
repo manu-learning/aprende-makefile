@@ -1,0 +1,62 @@
+#+TITLE: Recipes (Recetas) - Ordenes - Comandos
+* Conceptos
+ - Los *comandos* se ejecutan cuando se cumple la *regla*
+ - Deben estar identados con *tabs* (/si nos olvidamos, habrán errores/)
+* Definir multiples makefiles
+** Conceptos
+  - Por lo general se suele tener sólo un archivo ~Makefile~ y se ejecuta con ~make~
+  - Si el nombre no es ~Makefile~ podemos usar ~make -f nombreDelMakefile~
+  - Si tenemos varios makefiles podemos seguir el estándar de agregarles la extensión ~.mk~
+** Ejemplo
+  #+BEGIN_SRC shell
+    # suponiendo que tenemos un segundo makefile
+    make -f build.mk
+
+    # la otra alternativa es
+    make --file=build.mk
+  #+END_SRC
+* Ignorar errores de ejecución
+** Conceptos
+  - Usamos el prefijo ~-~ previo a declarar el comando en una regla (Ej. ~-rm *.c~ en vez de ~rm *.c~)
+  - Si usamos ~-comando~ y alguna iteración de éste falla, seguirá ejecutando el resto de instancias
+** Ejemplo
+  #+BEGIN_SRC makefile
+    # este era el caso típico que solíamos hacer
+    # si por algún motivo falla el rm, no continúa borrando
+    # (Ej. no encuentra algún archivo .o)
+    .PHONY: clean
+    clean:
+      rm *.o
+
+    # SOLUCION HERE..!
+    # Si falla el rm por mismos motivos que el de arriba
+    # no importa, seguirá ejecutandose borrando los que falten
+    .PHONY: clean
+    clean:
+      -rm *.o	# acá estamos agregando el guión.. :)
+  #+END_SRC
+* No mostrar la linea de la orden
+** Conceptos
+  - Usamos el prefijo ~@~ previo a declarar el comando en una regla (Ej. ~@echo hola mundo~ en vez de ~echo hola mundo~)
+  - Se suele utilizar al imprimir mensajes cuando usamos el comando ~echo~ para evitar que make imprima el comando+mensaje
+** Ejemplo
+  #+BEGIN_SRC makefile
+    # - esto sólo imprimira en la shell un "hola mundo"
+    # - si no anteponemos el arroba, lo hará dos veces
+    # y la primera será con el comando echo seguido del string
+    programa:
+      @echo hola mundo
+  #+END_SRC
+* Simular ejecución del Makefile
+** Conceptos
+  - Si ejecutamos ~make -n~ ó ~make --just-print~ => simulará la ejecución, imprimiendo los mensajes del Makefile
+** Ejemplo
+  #+BEGIN_SRC shell
+    # ejecutamos el makefile
+    make -n # don't forget el parámetro -n
+
+    # esto imprimiría la terminal, simulando que se ejecuta el makefile
+    gcc -c jugadores.c
+    gcc -c main.c
+    gcc -o programa main.o jugadores.o
+  #+END_SRC
