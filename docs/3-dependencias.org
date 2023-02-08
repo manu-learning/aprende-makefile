@@ -1,0 +1,112 @@
+#+TITLE: Dependencias
+* Conceptos
+  - Cada *dependencia* representa un archivo (si no existe, make busca una regla donde aparezca como target y cree esa dependencia)
+  - Las *dependencias* son archivos que son requisitos para cumplir ó construir un target/objetivo
+    (/Ej.: juegito: jugador.c items.c jugador.h items.h, los archivos .c y .h serían dependencias para el target juegito/)
+* Timestamp de las Dependencias
+  - GNU Make compara el *timestamp* de creación/modificación entre
+    1) las dependencias
+    2) el objetivo/target
+  - Si el *timestamp* de alguna de dependencia es más moderno que el objetivo/target entonces
+    1) Esa dependencia fue actualizada/modificada, y se volverá a *construir el objetivo*
+    2) Se ejecuta la orden/es asociado a la regla para *construir el objetivo*
+* Ejemplos Básicos
+** Ejemplo 1
+   #+BEGIN_SRC makefile
+     calculadora.exe: calculadora.o operaciones.o lib.o
+       gcc calculadora.o operaciones.o lib.o -o calculadora.exe
+
+     calculadora.o: calculadora.c operaciones.h lib.h
+       gcc -c calculadora.c -o calculadora.o
+
+     operaciones.o: operaciones.c operaciones.h
+       gcc -c operaciones.c -o operaciones.o
+
+     lib.o: lib.c lib.h
+       gcc -c lib.c -o lib.o
+   #+END_SRC
+** Ejemplo 2
+  #+BEGIN_SRC makefile
+    # Este ejemplo no tiene macros automáticas ($?, $<, ...)
+    # tampoco predefinidas (CC, CFLAGS, ...), ni funciones (wildcad, patsubst, ...)
+    # es lo más simple posible para entender las dependencias
+
+    calculadora.exe: calculadora.o operaciones.o lib.o
+      gcc calculadora.o operaciones.o lib.o -o calculadora.exe
+
+    calculadora.o: calculadora.c ./include/operaciones.h ./include/lib.h
+      gcc -I./include -c calculadora.c -o calculadora.o
+
+    operaciones.o: operaciones.c ./include/operaciones.h
+      gcc -I./include -c operaciones.c -o operaciones.o
+
+    lib.o: lib.c ./include/lib.h
+      gcc -I./include -c lib.c -o lib.o
+  #+END_SRC
+* Ejemplo Común - Usando Macros automáticas/predefinidas y funciones
+  #+BEGIN_SRC makefile
+    SRC = calculadora.c operaciones.c lib.c
+    OBJ = $(SRC:.%c:.%o)
+
+    calculadora.exe: $(OBJ)
+      gcc $^ -o $@
+
+    calculadora.o: operaciones.h lib.h
+    operaciones.o: operaciones.h
+    lib.o: lib.h
+
+    $(OBJ): %.o: %.c
+      gcc -c $< -o $@
+  #+END_SRC
+* Grafo de Dependencias según GNU Linker y Compilador C
+** GNU Linker
+    - En las dependencias en verde interviene el *GNU linker*
+    - enlaza los objetos ~.o~ para formar el ejecutable ~.exe~
+** Compilador de C
+   - En las dependencias dentro del celeste interviene el *Compilador de C* (Ej. gcc)
+   - convierte los archivos fuentes ~.c~ a objetos ~.o~
+* Grafo de Dependencias de los Ejemplos
+ #+BEGIN_SRC plantuml :file assets/images/makefile-dependencias.png :exports results
+   @startuml
+   title Grafo de Dependencias
+
+   skinparam BackgroundColor lightGray
+   skinparam componentStyle rectangle
+
+   [calculadora.exe]#lightGreen
+
+   component "gcc -c operaciones.o" as A #lightBlue{
+     [operaciones.o]#lightGreen
+     [operaciones.c]
+     [operaciones.h]
+   }
+
+   component "gcc -c lib.o" as C #lightBlue{
+     [lib.o]#lightGreen
+     [lib.c]
+     [lib.h]
+   }
+
+   component "gcc -c calculadora.o" as B #lightBlue{
+     [calculadora.o]#lightGreen
+     [calculadora.c]
+   }
+
+
+   [calculadora.exe] -down-> [operaciones.o]
+   [calculadora.exe] -down-> [calculadora.o]
+   [calculadora.exe] -down-> [lib.o]
+
+   [calculadora.o] -down-> [calculadora.c]
+   [calculadora.o] -down-> [operaciones.h]
+   [calculadora.o] -down-> [lib.h]
+
+   [lib.o] -down-> [lib.c]
+   [lib.o] -down-> [lib.h]
+
+   [operaciones.o] -down-> [operaciones.c]
+   [operaciones.o] -down-> [operaciones.h]
+   @enduml
+ #+END_sRC
+
+ [[file:assets/images/makefile-dependencias.png]]
